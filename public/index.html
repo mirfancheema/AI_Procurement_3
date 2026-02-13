@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OrderPilot | AI Procurement POC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="kicker">AI Procurement Co-Pilot for SMEs</p>
+      <h1>OrderPilot POC</h1>
+      <p class="hero-text">Forecast demand, generate PR, route approvals, automate supplier emails, track delivery and GRN, execute 3-way match, and run payment simulation with full audit visibility.</p>
+    </div>
+    <div class="hero-meta">
+      <p><span>Company</span><strong>Nova Foods Distribution</strong></p>
+      <p><span>Employees</span><strong>28</strong></p>
+      <p><span>Lifecycle</span><strong>End-to-End Mock</strong></p>
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="steps" aria-label="Procurement workflow steps">
+      <button class="step-link active" data-target="forecast">1 Forecast</button>
+      <button class="step-link" data-target="pr">2 PR Generation</button>
+      <button class="step-link" data-target="approval">3 Approval</button>
+      <button class="step-link" data-target="supplier">4 Supplier AI</button>
+      <button class="step-link" data-target="delivery">5 Delivery + GRN</button>
+      <button class="step-link" data-target="payment">6 3-Way + Payment</button>
+      <button class="step-link" data-target="score">7 Supplier Scoring</button>
+      <button class="step-link" data-target="audit">8 Audit + KPI</button>
+    </aside>
+
+    <section class="workspace">
+      <article class="panel active" id="panel-forecast">
+        <div class="panel-head">
+          <h2>Forecasting Engine</h2>
+          <button data-export="forecast" class="btn ghost">Download Forecast PDF</button>
+        </div>
+        <p class="lead">Fast movers with low stock are linked directly to reorder predictions and cashflow impact.</p>
+        <div class="grid two-col">
+          <section class="card">
+            <h3>Fast Items at Risk</h3>
+            <table>
+              <thead>
+                <tr><th>SKU</th><th>Velocity/day</th><th>Stock</th><th>Days Cover</th><th>Forecast 30d</th></tr>
+              </thead>
+              <tbody id="risk-table"></tbody>
+            </table>
+          </section>
+          <section class="card">
+            <h3>Forecast Snapshot</h3>
+            <p>Total 30-day demand: <strong id="demand-total">-</strong></p>
+            <p>Safety stock recommendation: <strong id="safety-stock">-</strong></p>
+            <p>Budget drawdown: <strong id="budget-draw">-</strong></p>
+            <p>Cashflow pressure: <strong id="cashflow">-</strong></p>
+            <button id="btn-refresh-forecast" class="btn primary">Refresh Forecast</button>
+          </section>
+        </div>
+        <div class="grid">
+          <section class="card">
+            <h3>Forecast by SKU</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Forecast 7d</th>
+                  <th>Forecast 14d</th>
+                  <th>Forecast 30d</th>
+                  <th>Reorder Point</th>
+                  <th>Suggested Reorder Qty</th>
+                </tr>
+              </thead>
+              <tbody id="sku-forecast-table"></tbody>
+            </table>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-pr">
+        <div class="panel-head">
+          <h2>Smart PR Generator</h2>
+          <button data-export="pr" class="btn ghost">Download PR PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <h3>Create Draft PR</h3>
+            <p>PR Number: <strong id="pr-number">Not generated</strong></p>
+            <label>Supplier</label>
+            <select id="pr-supplier"></select>
+            <label>SKU</label>
+            <select id="pr-sku"></select>
+            <label>Currency</label>
+            <select id="pr-currency">
+              <option>USD</option>
+              <option>EUR</option>
+              <option>SGD</option>
+            </select>
+            <label>Quantity</label>
+            <input type="number" id="pr-qty" min="1" value="1200">
+            <p class="muted">GST auto-calc: 7% | Historical baseline: $2.30/unit</p>
+            <p>Draft Unit Price (USD): <strong id="draft-unit-price">$2.30</strong></p>
+            <p>Estimated PR Amount (USD, incl. GST): <strong id="pr-est-amount">$0.00</strong></p>
+            <button id="btn-request-price" class="btn primary">Send Price Request Email</button>
+          </section>
+          <section class="card">
+            <h3>Human Review Gate</h3>
+            <p id="pr-email-status">No supplier quote parsed yet.</p>
+            <p>Reviewed Unit Price (USD): <strong id="reviewed-unit-price">-</strong></p>
+            <p>Quoted PR Amount (USD, incl. GST): <strong id="pr-quoted-amount">$0.00</strong></p>
+            <label>Reviewed Quantity</label>
+            <input type="number" id="review-qty" min="1" value="1200">
+            <div class="inline-actions">
+              <button id="btn-pr-cancel" class="btn danger">Cancel PR</button>
+              <button id="btn-pr-signoff" class="btn primary">Human Sign-Off</button>
+            </div>
+            <p class="warning">PR cannot proceed to approval without human sign-off.</p>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-approval">
+        <div class="panel-head">
+          <h2>Threshold Approval Workflow</h2>
+          <button data-export="approval" class="btn ghost">Download Approval PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <h3>Signed-Off PRs</h3>
+            <p id="signedoff-prs-empty">No signed-off PRs available.</p>
+            <table id="signedoff-prs-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>PR Number</th>
+                  <th>SKU</th>
+                  <th>Qty</th>
+                  <th>Supplier</th>
+                  <th>Signed Off At</th>
+                </tr>
+              </thead>
+              <tbody id="signedoff-prs-body"></tbody>
+            </table>
+            <label>Select Signed-Off PR</label>
+            <select id="approval-pr-select">
+              <option value="">Select a signed-off PR</option>
+            </select>
+            <label>Role</label>
+            <select id="role">
+              <option value="manager">Purchase Manager (max 5%)</option>
+              <option value="director">Company Director (max 20%)</option>
+            </select>
+            <label>Variance %</label>
+            <input type="number" id="variance" min="0" max="30" step="0.1" value="6.4">
+            <button id="btn-route" class="btn primary">Evaluate &amp; Route Selected PR</button>
+          </section>
+          <section class="card">
+            <h3>Decision</h3>
+            <p id="approval-outcome">No routing decision yet.</p>
+            <ul class="compact">
+              <li>Multi-level routing is simulated.</li>
+              <li>Escalation alerts for overdue approvals.</li>
+              <li>Delegation support for approver absence.</li>
+            </ul>
+          </section>
+        </div>
+        <div class="grid">
+          <section class="card">
+            <h3>Pending Approvals</h3>
+            <p id="pending-approvals-empty">No pending approvals.</p>
+            <table id="pending-approvals-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>PR Number</th>
+                  <th>SKU</th>
+                  <th>Qty</th>
+                  <th>Supplier</th>
+                  <th>Variance</th>
+                  <th>Requested At</th>
+                </tr>
+              </thead>
+              <tbody id="pending-approvals-body"></tbody>
+            </table>
+            <div class="inline-actions">
+              <button id="btn-approve-selected" class="btn primary">Approve Selected</button>
+            </div>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-supplier">
+        <div class="panel-head">
+          <h2>AI Agent Supplier Communication</h2>
+          <button data-export="supplier" class="btn ghost">Download Communication PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <h3>Approved PR Queue</h3>
+            <p id="approved-prs-empty">No approved PRs available.</p>
+            <table id="approved-prs-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>PR Number</th>
+                  <th>SKU</th>
+                  <th>Qty</th>
+                  <th>Supplier</th>
+                  <th>Approval</th>
+                </tr>
+              </thead>
+              <tbody id="approved-prs-body"></tbody>
+            </table>
+            <label>Select Approved PR</label>
+            <select id="approved-pr-select">
+              <option value="">Select an approved PR</option>
+            </select>
+            <button id="btn-send-po" class="btn primary">Send Approved PO</button>
+            <button id="btn-remind" class="btn primary">Send Delivery Reminder</button>
+            <button id="btn-human-override" class="btn danger">Simulate Human Intervention Request</button>
+          </section>
+          <section class="card">
+            <p id="comms-summary">No incoming supplier response yet.</p>
+            <p id="comms-sentiment">Sentiment: Neutral</p>
+            <p id="comms-priority">Priority: Medium</p>
+            <p class="muted">All emails include AI disclosure tag in this POC.</p>
+          </section>
+        </div>
+        <div class="grid">
+          <section class="card">
+            <h3>Approved PO Sent to Supplier</h3>
+            <div class="mono" id="po-details">No PO dispatch record yet.</div>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-delivery">
+        <div class="panel-head">
+          <h2>Delivery Tracking and GRN</h2>
+          <button data-export="delivery" class="btn ghost">Download Delivery PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <p id="delivery-sync-status">Periodic sync not run.</p>
+            <button id="btn-sync-delivery" class="btn primary">Run Periodic Sync</button>
+          </section>
+          <section class="card">
+            <label>Received Quantity</label>
+            <input type="number" id="grn-quantity" min="0" value="980">
+            <label>Quality</label>
+            <select id="grn-quality">
+              <option value="pass">Pass</option>
+              <option value="minor">Minor discrepancy</option>
+              <option value="major">Major discrepancy</option>
+            </select>
+            <button id="btn-grn" class="btn primary">Submit GRN</button>
+            <p id="grn-status">No GRN entered yet.</p>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-payment">
+        <div class="panel-head">
+          <h2>3-Way Match and Payment Execution</h2>
+          <button data-export="payment" class="btn ghost">Download Payment PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <p>PO Qty: <strong id="po-qty">1200</strong></p>
+            <p>GRN Qty: <strong id="grn-qty-view">-</strong></p>
+            <p>Invoice Qty: <strong id="invoice-qty">1180</strong></p>
+            <button id="btn-match" class="btn primary">Run 3-Way Match</button>
+            <p id="match-status">Match not run.</p>
+          </section>
+          <section class="card">
+            <p>Outstanding payables: <strong>$12,744</strong></p>
+            <p>Discount window: <strong>1.5% in 7 days</strong></p>
+            <button id="btn-pay" class="btn primary">Execute Payment (Mock API)</button>
+            <p id="pay-status">Payment not executed.</p>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-score">
+        <div class="panel-head">
+          <h2>Supplier Performance Scoring</h2>
+          <button data-export="score" class="btn ghost">Download Score PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <p>On-Time Delivery (40%): <strong>82</strong></p>
+            <p>Price Competitiveness (25%): <strong>74</strong></p>
+            <p>Order Accuracy (20%): <strong>88</strong></p>
+            <p>Response Time (10%): <strong>70</strong></p>
+            <p>Quality Issues (5%): <strong>92</strong></p>
+            <button id="btn-score" class="btn primary">Calculate Score</button>
+          </section>
+          <section class="card">
+            <p id="score-total">Score: -</p>
+            <p id="score-rating">Rating: -</p>
+            <p id="score-action">Action: -</p>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-audit">
+        <div class="panel-head">
+          <h2>Audit Trail and KPI Dashboard</h2>
+          <button data-export="audit" class="btn ghost">Download KPI PDF</button>
+        </div>
+        <div class="grid two-col">
+          <section class="card">
+            <ul class="compact" id="kpi-list">
+              <li>On-time delivery rate: 82%</li>
+              <li>Average lead time: 5.2 days</li>
+              <li>PR to approval cycle: 1.8 days</li>
+              <li>Approval bottleneck alerts: 2 open</li>
+              <li>AI automation rate: 78%</li>
+            </ul>
+          </section>
+          <section class="card mono" id="audit-log"></section>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="./main.js" defer></script>
+</body>
+</html>
